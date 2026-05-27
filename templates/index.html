@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Intelligence Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0F0F13;
+      --surface:  #16161C;
+      --border:   #242430;
+      --border-2: #2E2E3E;
+      --text:     #E8E6F0;
+      --muted:    #6B6B82;
+      --sage:     #7EC8A0;
+      --sage-dim: #1A2E22;
+      --blush:    #E8A598;
+      --blush-dim:#2E1E1C;
+      --sky:      #88B4D4;
+      --sky-dim:  #162030;
+      --lav:      #A898D8;
+      --lav-dim:  #1E1830;
+      --accent:   #A898D8;
+      --radius:   12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--accent); }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border-2);
+      padding: 5px 12px;
+      border-radius: 100px;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* ── SIDEBAR (form) ── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 36px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+
+    .label-hint {
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    input, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      transition: border-color 0.2s;
+      resize: none;
+      outline: none;
+      width: 100%;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input:focus, textarea:focus { border-color: var(--accent); }
+
+    .run-btn {
+      background: var(--accent);
+      color: #0F0F13;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .run-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .run-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .run-btn .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(15,15,19,0.3);
+      border-top-color: #0F0F13;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      padding: 36px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      opacity: 0.4;
+    }
+
+    .empty-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--text);
+      opacity: 0.3;
+    }
+
+    .empty-sub {
+      font-size: 13.5px;
+      opacity: 0.5;
+    }
+
+    /* ── PIPELINE ── */
+    #pipeline { display: none; flex-direction: column; gap: 16px; }
+
+    .agent-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .agent-card.active  { border-color: var(--accent); }
+    .agent-card.done    { border-color: var(--border-2); }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .agent-icon {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .agent-icon.researcher { background: var(--sage-dim); }
+    .agent-icon.analyst    { background: var(--blush-dim); }
+    .agent-icon.writer     { background: var(--sky-dim); }
+
+    .agent-info { flex: 1; }
+
+    .agent-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .agent-status {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .agent-status.running { color: var(--accent); }
+    .agent-status.done    { color: var(--sage); }
+
+    .agent-toggle {
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+
+    .agent-toggle.open { transform: rotate(180deg); }
+
+    .agent-body {
+      padding: 0 20px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.2s;
+    }
+
+    .agent-body.open {
+      max-height: 600px;
+      padding: 0 20px 16px;
+    }
+
+    .agent-output {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    /* ── PULSE ANIMATION ── */
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-anim 1.2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-anim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── EMAIL OUTPUT ── */
+    #email-section {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .email-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .email-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--sage);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .email-label::before {
+      content: '';
+      width: 7px; height: 7px;
+      background: var(--sage);
+      border-radius: 50%;
+    }
+
+    .copy-btn {
+      background: var(--border-2);
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .copy-btn:hover { background: #3A3A50; }
+    .copy-btn.copied { color: var(--sage); }
+
+    .email-body {
+      padding: 24px;
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .email-subject {
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    /* ── ERROR ── */
+    #error-box {
+      display: none;
+      background: var(--blush-dim);
+      border: 1px solid var(--blush);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 13.5px;
+      color: var(--blush);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+      header { padding: 16px 20px; }
+      .main { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Sales<span>Agent</span></div>
+    <div class="badge">Powered by LLaMA 3.3 · Groq</div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ── SIDEBAR: Input form ── -->
+    <aside class="sidebar">
+      <div class="sidebar-title">Pipeline Inputs</div>
+
+      <form id="pipeline-form">
+        <div style="display:flex; flex-direction:column; gap:18px;">
+
+          <div class="field">
+            <label>
+              Target Company
+              <span class="label-hint">— who you're reaching out to</span>
+            </label>
+            <input type="text" name="company_name" placeholder="e.g. Notion, Stripe, Figma" required />
+          </div>
+
+          <div class="field">
+            <label>
+              What you're selling
+              <span class="label-hint">— your product in one line</span>
+            </label>
+            <textarea name="your_product" rows="2" placeholder="e.g. an AI-powered onboarding tool for SaaS teams" required></textarea>
+          </div>
+
+          <div class="field">
+            <label>Your Name</label>
+            <input type="text" name="sender_name" placeholder="e.g. Prateek Bhoge" required />
+          </div>
+
+          <div class="field">
+            <label>Your Role</label>
+            <input type="text" name="sender_role" placeholder="e.g. Product Manager at XYZ" required />
+          </div>
+
+          <button type="submit" class="run-btn" id="run-btn">
+            <div class="spinner" id="spinner"></div>
+            <span id="btn-label">▶ Run Pipeline</span>
+          </button>
+
+        </div>
+      </form>
+
+      <!-- Pipeline legend -->
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:auto; padding-top:24px; border-top:1px solid var(--border);">
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-weight:600;">Pipeline</div>
+        <div style="font-size:12.5px; color:var(--muted); display:flex; flex-direction:column; gap:6px;">
+          <div>🔍 <strong style="color:var(--sage)">Researcher</strong> — web search → company profile</div>
+          <div>🧠 <strong style="color:var(--blush)">Analyst</strong> — pain points → sales angles</div>
+          <div>✍️ <strong style="color:var(--sky)">Writer</strong> — analysis → outreach email</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── MAIN: Pipeline output ── -->
+    <main class="main">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🤖</div>
+        <div class="empty-title">Ready to run</div>
+        <div class="empty-sub">Fill in the inputs and hit Run Pipeline</div>
+      </div>
+
+      <!-- Error box -->
+      <div id="error-box"></div>
+
+      <!-- Agent cards (shown during/after run) -->
+      <div id="pipeline">
+
+        <div class="agent-card" id="card-researcher">
+          <div class="agent-header" onclick="toggleCard('researcher')">
+            <div class="agent-icon researcher">🔍</div>
+            <div class="agent-info">
+              <div class="agent-name">Researcher Agent</div>
+              <div class="agent-status" id="status-researcher">Waiting...</div>
+            </div>
+            <div class="agent-toggle" id="toggle-researcher">▼</div>
+          </div>
+          <div class="agent-body" id="body-researcher">
+            <div class="agent-output" id="output-researcher"></div>
+          </div>
+        </div>
+
+        <div class="agent-card" id="card-analyst">
+          <div class="agent-header" onclick="toggleCard('analyst')">
+            <div class="agent-icon analyst">🧠</div>
+            <div class="agent-info">
+              <div class="agent-name">Analyst Agent</div>
+              <div class="agent-status" id="status-analyst">Waiting...</div>
+            </div>
+            <div class="agent-toggle" id="toggle-analyst">▼</div>
+          </div>
+          <div class="agent-body" id="body-analyst">
+            <div class="agent-output" id="output-analyst"></div>
+          </div>
+        </div>
+
+        <div class="agent-card" id="card-writer">
+          <div class="agent-header" onclick="toggleCard('writer')">
+            <div class="agent-icon writer">✍️</div>
+            <div class="agent-info">
+              <div class="agent-name">Writer Agent</div>
+              <div class="agent-status" id="status-writer">Waiting...</div>
+            </div>
+            <div class="agent-toggle" id="toggle-writer">▼</div>
+          </div>
+          <div class="agent-body" id="body-writer">
+            <div class="agent-output" id="output-writer"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Final email -->
+      <div id="email-section">
+        <div class="email-header">
+          <div class="email-label">Final Outreach Email</div>
+          <button class="copy-btn" id="copy-btn" onclick="copyEmail()">Copy</button>
+        </div>
+        <div class="email-body" id="email-body"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────
+    let emailText = "";
+
+    // ── Toggle agent card open/closed ──────────────────────────────────
+    function toggleCard(agent) {
+      const body   = document.getElementById(`body-${agent}`);
+      const toggle = document.getElementById(`toggle-${agent}`);
+      body.classList.toggle("open");
+      toggle.classList.toggle("open");
+    }
+
+    // ── Open a card programmatically ───────────────────────────────────
+    function openCard(agent) {
+      document.getElementById(`body-${agent}`).classList.add("open");
+      document.getElementById(`toggle-${agent}`).classList.add("open");
+    }
+
+    function closeCard(agent) {
+      document.getElementById(`body-${agent}`).classList.remove("open");
+      document.getElementById(`toggle-${agent}`).classList.remove("open");
+    }
+
+    // ── Set agent visual state ─────────────────────────────────────────
+    function setAgentState(agent, state, message) {
+      const card   = document.getElementById(`card-${agent}`);
+      const status = document.getElementById(`status-${agent}`);
+
+      card.className  = `agent-card ${state}`;
+      status.className = `agent-status ${state}`;
+      status.textContent = message;
+    }
+
+    // ── Reset UI for a new run ─────────────────────────────────────────
+    function resetUI() {
+      document.getElementById("empty-state").style.display   = "none";
+      document.getElementById("pipeline").style.display      = "flex";
+      document.getElementById("email-section").style.display = "none";
+      document.getElementById("error-box").style.display     = "none";
+
+      ["researcher", "analyst", "writer"].forEach(a => {
+        setAgentState(a, "", "Waiting...");
+        document.getElementById(`output-${a}`).textContent = "";
+        closeCard(a);
+      });
+
+      emailText = "";
+      document.getElementById("email-body").textContent = "";
+      document.getElementById("copy-btn").textContent   = "Copy";
+      document.getElementById("copy-btn").classList.remove("copied");
+    }
+
+    // ── Copy email to clipboard ────────────────────────────────────────
+    function copyEmail() {
+      navigator.clipboard.writeText(emailText).then(() => {
+        const btn = document.getElementById("copy-btn");
+        btn.textContent = "Copied ✓";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = "Copy";
+          btn.classList.remove("copied");
+        }, 2000);
+      });
+    }
+
+    // ── Form submit: start SSE pipeline ───────────────────────────────
+    document.getElementById("pipeline-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const btn     = document.getElementById("run-btn");
+      const spinner = document.getElementById("spinner");
+      const label   = document.getElementById("btn-label");
+
+      // Disable button + show spinner
+      btn.disabled        = true;
+      spinner.style.display = "block";
+      label.textContent   = "Running...";
+
+      resetUI();
+
+      // Gather form data
+      const formData = new FormData(e.target);
+
+      // Open SSE connection to /run
+      // SSE doesn't support POST natively, so we use fetch + ReadableStream
+      const response = await fetch("/run", {
+        method: "POST",
+        body: formData
+      });
+
+      // Read the stream chunk by chunk
+      const reader  = response.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE messages are separated by double newlines
+        const messages = buffer.split("\n\n");
+        buffer = messages.pop(); // keep incomplete message in buffer
+
+        for (const msg of messages) {
+          if (!msg.trim()) continue;
+
+          // Parse SSE format: "event: X\ndata: Y"
+          const lines    = msg.split("\n");
+          const eventLine = lines.find(l => l.startsWith("event:"));
+          const dataLine  = lines.find(l => l.startsWith("data:"));
+
+          if (!eventLine || !dataLine) continue;
+
+          const event = eventLine.replace("event:", "").trim();
+          const data  = JSON.parse(dataLine.replace("data:", "").trim());
+
+          // ── Handle each event type ─────────────────────────────────
+          if (event === "agent_start") {
+            setAgentState(data.agent, "active", `⏳ ${data.message}`);
+            openCard(data.agent);
+          }
+
+          else if (event === "agent_done") {
+            const doneMessages = {
+              researcher: "✓ Company profile ready",
+              analyst:    "✓ Sales brief ready",
+              writer:     "✓ Email drafted"
+            };
+            setAgentState(data.agent, "done", doneMessages[data.agent]);
+            document.getElementById(`output-${data.agent}`).textContent = data.output;
+            closeCard(data.agent);
+          }
+
+          else if (event === "complete") {
+            // Show the final email prominently
+            emailText = data.email;
+            const emailSection = document.getElementById("email-section");
+            const emailBody    = document.getElementById("email-body");
+
+            // Format: bold the subject line
+            const lines = data.email.split("\n");
+            emailBody.innerHTML = "";
+
+            lines.forEach((line, i) => {
+              if (line.startsWith("SUBJECT:")) {
+                const div = document.createElement("div");
+                div.className   = "email-subject";
+                div.textContent = line;
+                emailBody.appendChild(div);
+              } else {
+                const div = document.createElement("div");
+                div.textContent = line;
+                if (line.trim()) emailBody.appendChild(div);
+              }
+            });
+
+            emailSection.style.display = "block";
+            emailSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+            // Re-enable button
+            btn.disabled        = false;
+            spinner.style.display = "none";
+            label.textContent   = "▶ Run Again";
+          }
+
+          else if (event === "error") {
+            const errorBox = document.getElementById("error-box");
+            errorBox.style.display = "block";
+            errorBox.textContent   = `Error: ${data.message}`;
+            btn.disabled        = false;
+            spinner.style.display = "none";
+            label.textContent   = "▶ Run Pipeline";
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
